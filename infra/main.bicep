@@ -32,12 +32,12 @@ resource aiAccount 'Microsoft.CognitiveServices/accounts@2022-12-01' = {
 
 // Deploy an O4-Mini model to the service
 resource o4MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-10-01' = {
-  name: '${aiAccount.name}/o4-mini'
+  name: '${aiAccount.name}/gpt-4.1-mini'
   properties: {
-    model: 'o4-mini'
+    model: 'gpt-4.1-mini'
     scaleSettings: {
-      scaleType: 'Standard'
-      capacity: 1
+      scaleType: 'DataZoneStandard'
+      capacity: 100
     }
   }
   dependsOn: [ aiAccount ]

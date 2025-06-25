@@ -55,9 +55,10 @@ Follow on-screen instructions to interact with the conversational agent.
 
 Use the included Bicep template to create an Azure OpenAI (AI Foundry) resource and deploy an o4-mini model.
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fjakeatmsft%2Faoai_fsi_cua%2Fmain%2Finfra%2Fmain.bicep)
+<!-- Deploy directly using ARM template from this repo -->
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fjakeatmsft%2Faoai_fsi_cua%2Fmain%2Finfra%2Fmain.json)
 
-> Note: Replace `<USERNAME>` and `<REPO>` in the link above with your GitHub username and repository name.
+> Note: The button above points directly to the ARM template (infra/main.json) in this repository. Ensure it references the raw JSON URL and not the GitHub HTML page to avoid parsing errors.
 
 
 1. Ensure you have the [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli) and the Bicep CLI installed.
