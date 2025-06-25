@@ -35,10 +35,12 @@
       "name": "[format('{0}/o4-mini', parameters('serviceName'))]",
       "dependsOn": [ "[resourceId('Microsoft.CognitiveServices/accounts', parameters('serviceName'))]" ],
       "properties": {
-        "model": "o4-mini",
+        "model": {
+          "modelName": "o4-mini"
+        },
         "scaleSettings": {
-          "scaleType": "Standard",
-          "capacity": 1
+          "scaleType": "DataZoneStandard",
+          "capacity": 100
         }
       }
     }

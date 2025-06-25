@@ -34,7 +34,9 @@ resource aiAccount 'Microsoft.CognitiveServices/accounts@2022-12-01' = {
 resource o4MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-10-01' = {
   name: '${aiAccount.name}/gpt-4.1-mini'
   properties: {
-    model: 'gpt-4.1-mini'
+    model: {
+      modelName: 'gpt-4.1-mini'
+    }
     scaleSettings: {
       scaleType: 'DataZoneStandard'
       capacity: 100
