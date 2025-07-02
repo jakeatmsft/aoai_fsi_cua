@@ -57,64 +57,89 @@ load_dotenv(override=True)
 
 # --- Streamlit UI ---
 st.title("Azure OpenAI CUA Demo")
+# initialize session state defaults
+for _key, _default in [
+    ('proc', None),
+    ('agent_output_lines', []),
+    ('thread', None),
+    ('result_shown', False),
+    ('last_agent_lines_len', 0),
+]:
+    if _key not in st.session_state:
+        st.session_state[_key] = _default
 
-if "agent_result" not in st.session_state:
-    st.session_state.agent_result = None
 
 with st.form("instruction_form"):
     user_text = st.text_area(
         "Paste or type your instruction details here:",
         value=(
-             "Go to URL: https://forms.office.com/r/zH5V66N8P4 , "
-        "complete the form with the following data, stop once completed for human review:\n"
-            "{Full Name: Alex Johnson\n"
-            "Date of Birth: 03/22/1990\n"
-            "Gender: Female\n"
-            "Address: 456 Maple Street, San Diego, CA 92103\n"
-            "Phone Number: (619) 555-6789\n"
-            "Email Address: alex.johnson@example.com\n"
-            "Type of Insurance: Health Insurance\n"
-            "Coverage Amount: $50,000\n"
-            "Policy Start Date: 07/01/2025\n"
-            "Policy End Date: 07/01/2026\n"
-            "Do you have any pre-existing conditions?: Yes\n"
-            "If yes, please specify: Asthma\n"
-            "Are you currently taking any medication?: Yes\n"
-            "Property Address: 456 Maple Street, San Diego, CA 92103\n"
-            "Type of Property: Condo\n"
-            "Year Built: 2010\n"
-            "Square Footage: 1,200 sq ft}"
-                    "pause once completed for human review and wait for the next step."
+             """Go to URL: https://forms.office.com/r/zH5V66N8P4 , complete the form with the following data, stop once completed for human review:
+{Full Name: Alex Johnson
+Date of Birth: 03/22/1990
+Gender: Female
+Address: 456 Maple Street, San Diego, CA 92103
+Phone Number: (619) 555-6789
+Email Address: alex.johnson@example.com
+Type of Insurance: Health Insurance
+Coverage Amount: $50,000
+Policy Start Date: 07/01/2025
+Policy End Date: 07/01/2026
+Do you have any pre-existing conditions?: Yes
+If yes, please specify: Asthma
+Are you currently taking any medication?: Yes
+Property Address: 456 Maple Street, San Diego, CA 92103
+Type of Property: Condo
+Year Built: 2010
+Square Footage: 1,200 sq ft}pause once all fields are completed ask for human assistance before submitting the form .  Do not submit the form."""
         ),
         height=300
     )
     submitted = st.form_submit_button("Submit to Agent")
 
-if submitted:
-    task = user_text
-    import subprocess
-    import sys
+if submitted and st.session_state.proc is None:
+    import subprocess, sys, os, threading, signal
+    cmd = [
+        sys.executable,
+        os.path.join(os.path.dirname(__file__), "azure_openai_cua.py"),
+        "--task",
+        user_text,
+    ]
+    popen_kwargs = dict(stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    if os.name == 'nt':
+        popen_kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
+    proc = subprocess.Popen(cmd, **popen_kwargs)
+    st.session_state.proc = proc
+    st.session_state.agent_output_lines = []
+    def _reader():
+        for line in proc.stdout:
+            # Reassigning new list to session_state to trigger rerun
+            st.session_state['agent_output_lines'] = st.session_state['agent_output_lines'] + [line]
+        proc.wait()
+    thread = threading.Thread(target=_reader, daemon=True)
+    thread.start()
+    st.session_state.thread = thread
 
-    # Get the path to the current Python executable (should be the conda env Python)
-    python_executable = sys.executable
-    print(python_executable)
-    print("running cua agent")
-    script_path = os.path.join(os.path.dirname(__file__), "azure_openai_cua.py")
-    print(script_path)
-    # Pass the --task argument and user_text as separate arguments
-    result = subprocess.run(
-        [python_executable, script_path, "--task", user_text],
-        capture_output=True,
-        text=True,
-        encoding="utf-8"
-    )
-    print("STDOUT:", result.stdout)
-    #print("STDERR:", result.stderr)
-    print("RETURN CODE:", result.returncode)
-    
-
-    if result.returncode == 0:
-        st.success(result.stdout)
+if st.session_state.proc is not None:
+    placeholder = st.empty()
+    lines = st.session_state.agent_output_lines
+    placeholder.text("".join(lines))
+    prev = st.session_state.last_agent_lines_len
+    curr = len(lines)
+    if curr != prev:
+        st.session_state.last_agent_lines_len = curr
+        st.experimental_rerun()
+    proc = st.session_state.proc
+    import signal
+    if proc.poll() is None:
+        if st.button("Stop agent"):
+            if os.name == 'nt':
+                proc.send_signal(signal.CTRL_C_EVENT)
+            else:
+                proc.send_signal(signal.SIGINT)
     else:
-        st.error(f"Error running agent:\n{result.stderr}")
-    st.success(result.stdout)
+        if not st.session_state.result_shown:
+            if proc.returncode == 0:
+                st.success("Agent completed successfully.")
+            else:
+                st.error(f"Agent failed (exit code {proc.returncode}).")
+            st.session_state.result_shown = True

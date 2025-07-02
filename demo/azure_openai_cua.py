@@ -14,7 +14,7 @@ import asyncio
 from langchain_openai import AzureChatOpenAI
 
 from browser_use import Agent
-from browser_use.controller.service import Controller
+from browser_use.controller.service import Controller, ActionResult
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -33,6 +33,13 @@ class output_print(BaseModel):
 def save_models(params: output_print):
     with open('output.txt', 'w') as f:
         f.writelines(params.text)
+
+@controller.action('Ask user for information or assistance')
+def ask_for_human_assistance(prompt: str) -> str:
+	print(f'\n✋ The AI Agent is requesting assistance: {prompt}')
+	print('\t(press [Enter] when ready to continue)')
+	human_response = input(' > ')
+	return ActionResult(output=human_response.strip(), save_in_memory=True)
 
 load_dotenv(override=True)
 # Retrieve Azure-specific environment variables
@@ -54,7 +61,7 @@ if __name__ == "__main__":
         "--task",
         type=str,
         default="",
-        help="Task prompt for the agent."
+        help="Task prompt for the agent. Ask for human assistance before completing any steps such as submitting a form or clicking a button.",
     )
     args = parser.parse_args()
 
