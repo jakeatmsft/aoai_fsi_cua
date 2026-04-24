@@ -2,17 +2,17 @@ import argparse
 import os
 import asyncio
 import base64
-from openai import OpenAI
+import openai
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from playwright.async_api import async_playwright, TimeoutError
 
 token_provider = get_bearer_token_provider(
-    DefaultAzureCredential(), "https://ai.azure.com/.default"
+    DefaultAzureCredential(),
+    "https://cognitiveservices.azure.com/.default",
 )
 
 # Configuration
 # Set AZURE_OPENAI_ENDPOINT to your Azure OpenAI resource URL, e.g. https://YOUR-RESOURCE-NAME.openai.azure.com
-BASE_URL = os.environ.get("AZURE_OPENAI_ENDPOINT", "https://YOUR-RESOURCE-NAME.openai.azure.com").rstrip("/") + "/openai/v1/"
 MODEL = "gpt-5.4"
 DISPLAY_WIDTH = 1440
 DISPLAY_HEIGHT = 900
@@ -255,7 +255,7 @@ async def process_model_response(client, response, page, max_iterations=ITERATIO
 
         # Send the screenshot back for the next step
         try:
-            response = client.responses.create(
+            response = await client.responses.create(
                 model=MODEL,
                 previous_response_id=response_id,
                 tools=[{"type": "computer"}],
@@ -277,7 +277,7 @@ async def run_task(client, page, user_input):
     screenshot_base64 = await take_screenshot(page)
     print("\nTake initial screenshot")
 
-    response = client.responses.create(
+    response = await client.responses.create(
         model=MODEL,
         tools=[{"type": "computer"}],
         instructions=(
@@ -312,12 +312,21 @@ async def main():
         default="",
         help="Task prompt for the agent. If omitted, the agent runs in interactive mode.",
     )
+    parser.add_argument(
+        "--api-timeout-seconds",
+        type=float,
+        default=120.0,
+        dest="api_timeout_seconds",
+        help="Timeout in seconds for Azure OpenAI API calls.",
+    )
     args = parser.parse_args()
 
-    # Initialize OpenAI client
-    client = OpenAI(
-        base_url=BASE_URL,
-        api_key=token_provider()
+    # Initialize Azure OpenAI client using Azure AD bearer token (no API key)
+    client = openai.AsyncAzureOpenAI(
+        azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        azure_ad_token_provider=token_provider,
+        api_version="2025-04-01-preview",
+        timeout=args.api_timeout_seconds,
     )
 
     # Initialize Playwright

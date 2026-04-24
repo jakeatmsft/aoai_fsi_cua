@@ -5,12 +5,10 @@ This repository contains two Streamlit-based demos showcasing conversational UI 
 ## Prerequisites
 - Python 3.8 or higher
 - pip
-- An Azure OpenAI resource with endpoint and API key
-1. Create a `.env` file in the project root with your Azure OpenAI credentials:
+- An Azure OpenAI resource with endpoint
+- An Azure identity with access to the Azure OpenAI resource (e.g. via `az login` or a managed identity)
+1. Create a `.env` file in the project root with your Azure OpenAI endpoint:
    ```dotenv
-   # Azure OpenAI API key
-   AZURE_OPENAI_API_KEY=your_api_key_here
-
    # Azure OpenAI endpoint URL (e.g. https://your-resource-name.openai.azure.com)
    AZURE_OPENAI_ENDPOINT=https://your_endpoint_here
    ```
@@ -80,13 +78,15 @@ Use the included Bicep template to create an Azure OpenAI (AI Foundry) resource 
      --template-file infra/main.bicep \
      --parameters serviceName=<SERVICE_NAME> location=<LOCATION>
    ```
-5. After deployment completes, retrieve the endpoint and key:
+5. After deployment completes, retrieve the endpoint:
    ```bash
-   az cognitiveservices account show-keys \
+   az cognitiveservices account show \
      --name <SERVICE_NAME> \
-     --resource-group <RESOURCE_GROUP>
+     --resource-group <RESOURCE_GROUP> \
+     --query properties.endpoint
    ```
-6. Populate your `.env` file with the returned **key** and **endpoint**.
+6. Populate your `.env` file with the returned **endpoint**.
+7. Ensure your Azure identity (user or managed identity) has the **Cognitive Services OpenAI User** role on the resource.
 
 ## License
 This project is released under the MIT License.
