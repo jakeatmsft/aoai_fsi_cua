@@ -11,7 +11,8 @@ token_provider = get_bearer_token_provider(
 )
 
 # Configuration
-BASE_URL = "https://YOUR-RESOURCE-NAME.openai.azure.com/openai/v1/"
+# Set AZURE_OPENAI_ENDPOINT to your Azure OpenAI resource URL, e.g. https://YOUR-RESOURCE-NAME.openai.azure.com
+BASE_URL = os.environ.get("AZURE_OPENAI_ENDPOINT", "https://YOUR-RESOURCE-NAME.openai.azure.com").rstrip("/") + "/openai/v1/"
 MODEL = "gpt-5.4"
 DISPLAY_WIDTH = 1440
 DISPLAY_HEIGHT = 900
@@ -66,7 +67,10 @@ async def handle_action(page, action):
         elif button == "forward":
             await page.go_forward()
         elif button == "wheel":
-            await page.mouse.wheel(x, y)
+            scroll_x = action.get("scroll_x", 0)
+            scroll_y = action.get("scroll_y", 0)
+            await page.mouse.move(x, y)
+            await page.mouse.wheel(delta_x=scroll_x, delta_y=scroll_y)
         else:
             button_type = {"left": "left", "right": "right", "middle": "middle"}.get(button, "left")
             await page.mouse.click(x, y, button=button_type)
@@ -154,6 +158,7 @@ async def take_screenshot(page):
         print(f"Screenshot failed: {e}")
         if last_successful_screenshot:
             return last_successful_screenshot
+        raise RuntimeError("No screenshot available: initial screenshot failed.") from e
 
 
 async def process_model_response(client, response, page, max_iterations=ITERATIONS):
@@ -263,7 +268,7 @@ async def process_model_response(client, response, page, max_iterations=ITERATIO
             traceback.print_exc()
             break
 
-    if iteration >= max_iterations - 1:
+    else:
         print("Reached maximum number of iterations. Stopping.")
 
 
@@ -312,7 +317,7 @@ async def main():
     # Initialize OpenAI client
     client = OpenAI(
         base_url=BASE_URL,
-        api_key=token_provider
+        api_key=token_provider()
     )
 
     # Initialize Playwright
