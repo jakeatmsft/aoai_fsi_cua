@@ -2,3 +2,6 @@ streamlit
 python-dotenv
 langchain-openai
 pydantic
+openai
+azure-identity
+playwright
